@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#060a14">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>5-1 Volleyball Lab · 3D rotation trainer</title>
+  <meta name="description" content="Interactive 3D trainer for the 5-1 volleyball system: rotations, serve receive, defense, transition and coverage.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏐</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="scene"></div>
+
+  <div id="loading"><div class="spinner">🏐</div><p>Warming up the court…</p></div>
+
+  <!-- Mobile top bar -->
+  <div id="mbar" class="glass">
+    <button id="mTitle" class="mtitle"><span id="mRot" class="pill">H1</span><span id="mScenario">…</span></button>
+    <button id="menuBtn" class="iconbtn" aria-label="Menu">
+      <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+
+  <div id="sheetBackdrop"></div>
+
+  <aside id="panel" class="glass">
+    <div id="sheetHandle"><span></span></div>
+    <div class="brand">
+      <div class="logo">🏐</div>
+      <div>
+        <h1>5-1 Volleyball Lab</h1>
+        <p>Interactive 3D rotation trainer</p>
+      </div>
+      <button id="sheetClose" class="iconbtn" aria-label="Close">
+        <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+
+    <section>
+      <h2>Rotation <span class="hint">H = setter's zone</span></h2>
+      <div id="rotations" class="seg"></div>
+      <div class="zonemap">
+        <div class="netbar">NET</div>
+        <div id="zonegrid"></div>
+      </div>
+      <div class="rowinfo"><span id="legal" class="badge"></span></div>
+      <div class="rowinfo small" id="benchInfo"></div>
+      <div class="rowinfo small overlap" id="overlapInfo"></div>
+    </section>
+
+    <section>
+      <h2>Scenario</h2>
+      <div id="scenarios"></div>
+    </section>
+
+    <section>
+      <h2>Highlight <span class="hint">or tap a player</span></h2>
+      <div id="roles" class="chips"></div>
+      <div class="quick">
+        <button id="hlSetter">Setter</button>
+        <button id="hlHitters">Hitters</button>
+        <button id="hlBack">Passers</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>Options</h2>
+      <label class="switch"><input type="checkbox" id="tAuto"><span></span>Pause at each phase</label>
+      <label class="switch"><input type="checkbox" id="tPaths"><span></span>Movement paths</label>
+      <label class="switch"><input type="checkbox" id="tOpp"><span></span>Show opponents</label>
+      <label class="switch"><input type="checkbox" id="tLabels"><span></span>Labels</label>
+      <label class="switch"><input type="checkbox" id="tZones"><span></span>Zones &amp; setter target</label>
+      <div class="random">
+        <label class="switch"><input type="checkbox" id="tRandom"><span></span>Random serves &amp; attacks</label>
+        <button id="btnReroll" class="btn">🎲 New</button>
+      </div>
+    </section>
+
+    <footer class="credits">Drag to orbit · pinch/scroll to zoom · <kbd>Space</kbd> play · <kbd>←</kbd><kbd>→</kbd> phases · <kbd>1</kbd>–<kbd>6</kbd> rotation</footer>
+  </aside>
+
+  <div id="phase" class="glass">
+    <div class="phase-top"><span id="phaseIdx" class="pill"></span><span id="scenarioName"></span><span class="chev"></span></div>
+    <h3 id="phaseTitle"></h3>
+    <p id="phaseText"></p>
+    <p id="phaseRule" hidden></p>
+  </div>
+
+  <div id="views" class="glass"></div>
+
+  <footer id="transport" class="glass">
+    <div class="controls">
+      <button id="btnRestart" class="iconbtn" aria-label="Restart" title="Restart (R)">
+        <svg viewBox="0 0 24 24"><path d="M12 5V2L7 6l5 4V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z"/></svg>
+      </button>
+      <button id="btnPrev" class="iconbtn" aria-label="Previous phase" title="Previous phase (←)">
+        <svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zM9.5 12L18 18V6z"/></svg>
+      </button>
+      <button id="btnPlay" class="iconbtn play" aria-label="Play" title="Play / pause (Space)"></button>
+      <button id="btnNext" class="iconbtn" aria-label="Next phase" title="Play next phase (→)">
+        <svg viewBox="0 0 24 24"><path d="M16 6h2v12h-2zM6 18l8.5-6L6 6z"/></svg>
+      </button>
+    </div>
+    <div class="timeline">
+      <div class="track">
+        <input type="range" id="scrub" min="0" max="1000" value="0" aria-label="Timeline">
+        <div id="ticks"></div>
+      </div>
+      <div class="time"><span id="tNow">0.0</span>/<span id="tEnd">0.0</span>s</div>
+    </div>
+    <div class="speed">
+      <div class="speed-head"><span>Speed</span><b id="speedVal">0.5×</b></div>
+      <input type="range" id="speed" min="0.1" max="2" step="0.05" value="0.5" aria-label="Play speed">
+      <div class="speed-presets">
+        <button data-speed="0.25">¼×</button><button data-speed="0.5">½×</button><button data-speed="1">1×</button>
+      </div>
+    </div>
+  </footer>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
