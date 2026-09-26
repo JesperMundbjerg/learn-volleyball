@@ -486,6 +486,7 @@ function buildStaticUI() {
   $('#btnRestart').onclick = () => { state.t = 0; state.stopAt = null; setPlaying(true); };
   $('#btnPrev').onclick = prevPhase;
   $('#btnNext').onclick = nextPhase;
+  $('#btnExplain').onclick = toggleExplain;
   const scrub = $('#scrub');
   scrub.addEventListener('input', () => { state.t = (scrub.value / 1000) * built.tl.end; state.stopAt = null; setPlaying(false); });
 
@@ -514,10 +515,19 @@ function buildStaticUI() {
     else if (e.key === 'ArrowLeft') prevPhase();
     else if (e.key >= '1' && e.key <= '6') { state.sz = +e.key; load(); }
     else if (e.key === 'r') { state.t = 0; setPlaying(true); }
+    else if (e.key === 'e') toggleExplain();
     else if (e.key === 'Escape') closeSheet();
   });
 }
 const isSheet = () => matchMedia('(max-width: 760px)').matches;
+// The explanation card is hidden until the viewer asks for it.
+function toggleExplain() {
+  const on = document.body.classList.toggle('explain-on');
+  const b = $('#btnExplain');
+  b.classList.toggle('active', on);
+  b.setAttribute('aria-pressed', on);
+  b.setAttribute('aria-label', on ? 'Hide explanations' : 'Show explanations');
+}
 function openSheet() { document.body.classList.add('sheet-open'); }
 function closeSheet() { document.body.classList.remove('sheet-open'); }
 

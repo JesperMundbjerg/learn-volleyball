@@ -160,6 +160,8 @@ kbd { font-family: inherit; font-size: 10px; padding: 1px 5px; border-radius: 4p
 .iconbtn svg { width: 20px; height: 20px; fill: currentColor; }
 .iconbtn.play { width: 50px; height: 50px; border-radius: 50%; border: 0; background: linear-gradient(135deg, #facc15, #f59e0b); color: #1a1300; box-shadow: 0 6px 22px rgba(250,204,21,.4); }
 .iconbtn.play svg { width: 24px; height: 24px; }
+.iconbtn.active { background: #cfe0ff; color: #0b1020; border-color: #cfe0ff; }
+body:not(.explain-on) #phase { display: none; }
 
 .timeline { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .track { position: relative; flex: 1; height: 28px; display: flex; align-items: center; }
@@ -229,7 +231,9 @@ input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border: 0; bord
     gap: 6px 10px; padding: 8px 12px 10px; border-radius: 16px; }
   .timeline { grid-area: tl; gap: 8px; }
   .time { font-size: 11px; }
-  .controls { grid-area: ctl; gap: 8px; }
+  .controls { grid-area: ctl; gap: 6px; min-width: 0; }
+  /* Small buttons give up width before the bar overflows on narrow phones. */
+  .controls .iconbtn:not(.play) { flex: 0 1 44px; width: auto; min-width: 32px; }
   .speed { grid-area: spd; width: auto; display: flex; flex-direction: column; justify-content: center; gap: 4px; }
   .speed-head { display: none; }
   #speed { display: none; }
