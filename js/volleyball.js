@@ -150,8 +150,12 @@ class Team {
     this.zoneOf = {};
     for (const r of ROT_ORDER) this.zoneOf[r === this.MB_B && this.liberoIn ? 'L' : r] = zone[r];
     this.onCourt = Object.keys(this.zoneOf);
+    // H1 receive: the opposite starts in zone 4 and OH1 in zone 2, so they don't switch –
+    // OH1 attacks from the right, the opposite from the left.
+    this.noSwitch = !prefix && !serving && sz === 1;
     this.slots = {
-      LF: this.OH_F, MF: this.MB_F, RF: this.setterFront ? 'S' : 'OPP',
+      LF: this.noSwitch ? 'OPP' : this.OH_F, MF: this.MB_F,
+      RF: this.noSwitch ? this.OH_F : this.setterFront ? 'S' : 'OPP',
       LB: this.liberoIn ? 'L' : this.MB_B, MB: this.OH_B, RB: this.setterFront ? 'OPP' : 'S',
     };
     this.slotOf = Object.fromEntries(Object.entries(this.slots).map(([s, r]) => [r, s]));
@@ -185,6 +189,8 @@ class Team {
       .filter(([r]) => this.onCourt.includes(r));
   }
   hitterFor(type) { return { OH: this.OH_F, MB: this.MB_F, OPP: 'OPP', D: 'OPP', PIPE: this.OH_B }[type]; }
+  // Which ATTACKS/LANDINGS geometry an attack type uses (outside and opposite trade sides when not switching).
+  spot(type) { return this.noSwitch ? ({ OH: 'OPP', OPP: 'OH' }[type] || type) : type; }
   resolveType(t) {
     if (t === 'OPP' && this.setterFront) return 'D';
     if (t === 'D' && !this.setterFront) return 'OPP';
@@ -235,14 +241,14 @@ function offense(A, D, o) {
   const tl = A.tl;
   let type = A.resolveType(o.type);
   if (A.hitterFor(type) === o.setter) type = 'OH';
-  const atk = ATTACKS[type];
+  const atk = ATTACKS[A.spot(type)];
   const hitter = A.hitterFor(type);
   const busy = o.busy || {};
   const start = r => Math.max(o.prepFrom, busy[r] ?? -Infinity);
   const hitters = A.hitterList().filter(([r]) => r !== o.setter);
 
   // 1. Transition: everyone who can attack opens up to their approach spot.
-  for (const [r, tp] of hitters) A.moveAuto(r, ATTACKS[tp].start, start(r), 5.0);
+  for (const [r, tp] of hitters) A.moveAuto(r, ATTACKS[A.spot(tp)].start, start(r), 5.0);
 
   // 2. Set.
   const ts = o.tSet, ta = ts + atk.set.dur;
@@ -259,7 +265,7 @@ function offense(A, D, o) {
   const free = {};
   for (const [r, tp] of hitters) {
     if (r === hitter) continue;
-    const a = ATTACKS[tp];
+    const a = ATTACKS[A.spot(tp)];
     if (tp === 'MB') {
       const tj = ts - 0.05, t0 = Math.max(tj - 0.5, start(r) + 0.2);
       A.move(r, a.hit, t0, Math.max(0.3, tj - t0));
@@ -294,7 +300,7 @@ function offense(A, D, o) {
   // 6. Attack.
   let land = o.landingW;
   if (!land) {
-    let p = o.rnd ? pick(o.rnd, LANDINGS[type]) : LANDINGS[type][0];
+    let p = o.rnd ? pick(o.rnd, LANDINGS[A.spot(type)]) : LANDINGS[A.spot(type)][0];
     p = jit(o.rnd, p, 0.6);
     land = A.w([clamp(p[0], -4.3, 4.3), clamp(p[1], -8.7, -1)]);
   }
@@ -371,9 +377,13 @@ function sideOut(R, S, t0, o) {
 
 // ---------- captions ----------
 const ATTACK_TEXT = {
-  OH: (T, h) => `High ball to the outside. ${T.tag(h)} starts wide outside the sideline around the 3 m line and swings in to hit from zone 4.`,
+  OH: (T, h) => T.noSwitch
+    ? `High ball to the right side. In H1 receive ${T.tag(h)} stays in zone 2 (no switch with the opposite) and attacks from the right.`
+    : `High ball to the outside. ${T.tag(h)} starts wide outside the sideline around the 3 m line and swings in to hit from zone 4.`,
   MB: (T, h) => `Quick (1st tempo) set. ${T.tag(h)} is already in the air as the setter touches the ball – the set goes straight into the hitting hand just in front of the setter.`,
-  OPP: (T, h) => `Back set to the right side. ${T.tag(h)} attacks from zone 2 (a left-hander is ideal here).`,
+  OPP: (T, h) => T.noSwitch
+    ? `Front set to the left side. In H1 receive ${T.tag(h)} stays in zone 4 (no switch with the outside) and attacks from the left.`
+    : `Back set to the right side. ${T.tag(h)} attacks from zone 2 (a left-hander is ideal here).`,
   D: (T, h) => `The setter is front row, so ${T.tag(h)} attacks from the back row ("D" ball) – take-off must be behind the 3 m line.`,
   PIPE: (T, h) => `Pipe: ${T.tag(h)} attacks from the back row through the middle, taking off behind the 3 m line.`,
 };
@@ -381,7 +391,9 @@ const ATTACK_TEXT = {
 const rotLine = T =>
   `<b>H${T.sz}</b> – setter in zone ${T.sz}, ${T.setterFront
     ? 'front row: only two front-row hitters (the opposite can hit from the back row).'
-    : 'back row: three front-row hitters available.'}`;
+    : 'back row: three front-row hitters available.'}${T.noSwitch
+    ? ' In receive the opposite (zone 4) and OH1 (zone 2) do <b>not</b> switch – each attacks from the side they start on.'
+    : ''}`;
 
 function switchText(T) {
   const s = T.slots, g = r => T.tag(r);
